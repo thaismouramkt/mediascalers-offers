@@ -256,11 +256,6 @@ export default function Dashboard() {
                  <h2 className="text-xl font-bold leading-tight mb-2 text-white/90">{selectedOffer.name}</h2>
               </div>
 
-              <div className="w-full flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 mb-8">
-                 <span className="text-xs font-bold text-white/50 uppercase tracking-wider">Aviso da Rede</span>
-                 <span className="text-xs font-bold text-white/70">Comissão Oculta pela Eflow</span>
-              </div>
-
               {/* Informações detalhadas exigidas (Voltando para Recharts Nativo) */}
               <div className="mb-4">
                  <h3 className="text-base font-bold text-white/90 mb-4 inline-flex items-center gap-2 border-b border-indigo-500/30 pb-2"><Sparkles className="w-4 h-4 text-indigo-400" /> Analisador do Módulo</h3>
