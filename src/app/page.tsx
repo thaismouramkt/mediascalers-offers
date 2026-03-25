@@ -14,12 +14,17 @@ function cn(...inputs: ClassValue[]) {
 const getKeyword = (name: string) => {
   if(!name) return "";
   let kw = name.split('-')[0].split('|')[0];
-  // Remove variações das tags comerciais para sobrar só a marca do produto pro Trends
+  // Remove variações das tags comerciais
   kw = kw.replace(/\[?\bhot\b\]?/i, '')
          .replace(/\[?\bnew\b\]?/i, '')
          .replace(/\(\s*\)/g, '')
          .replace(/\[\s*\]/g, '')
          .trim();
+         
+  // Filtro final: Seleciona APENAS a primeira palavra conforme instrução restrita
+  if (kw) {
+    kw = kw.split(' ')[0].trim();
+  }
   return kw;
 };
 
