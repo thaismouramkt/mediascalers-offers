@@ -14,8 +14,9 @@ function cn(...inputs: ClassValue[]) {
 const getKeyword = (name: string) => {
   if(!name) return "";
   let kw = name.split('-')[0].split('|')[0];
-  // Remove variações das tags comerciais
-  kw = kw.replace(/\[?\bhot\b\]?/i, '')
+  // Remove variações das tags comerciais e símbolos como asteriscos
+  kw = kw.replace(/\*+/g, '')
+         .replace(/\[?\bhot\b\]?/i, '')
          .replace(/\[?\bnew\b\]?/i, '')
          .replace(/\(\s*\)/g, '')
          .replace(/\[\s*\]/g, '')
