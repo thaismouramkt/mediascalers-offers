@@ -30,12 +30,14 @@ const getKeyword = (name: string) => {
 };
 
 function TrendsGraph({ keyword }: { keyword: string }) {
-  const [data30, setData30] = useState<any[]>([]);
+  const [data1, setData1] = useState<any[]>([]);
   const [data7, setData7] = useState<any[]>([]);
+  const [data30, setData30] = useState<any[]>([]);
+  const [data365, setData365] = useState<any[]>([]);
   const [topCountries, setTopCountries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [viewMode, setViewMode] = useState<'30' | '7'>('30');
+  const [viewMode, setViewMode] = useState<'1' | '7' | '30' | '365'>('30');
 
   useEffect(() => {
     async function fetchTrends() {
@@ -43,8 +45,10 @@ function TrendsGraph({ keyword }: { keyword: string }) {
       try {
         const res = await axios.get(`/api/trends?keyword=${encodeURIComponent(keyword)}`);
         if (res.data.success) {
-          setData30(res.data.data30 || []);
+          setData1(res.data.data1 || []);
           setData7(res.data.data7 || []);
+          setData30(res.data.data30 || []);
+          setData365(res.data.data365 || []);
           setTopCountries(res.data.topCountries || []);
         } else {
           setError('Sem dados suficientes.');
@@ -65,14 +69,14 @@ function TrendsGraph({ keyword }: { keyword: string }) {
     </div>
   );
 
-  if (error || data30.length === 0) return (
+  if (error || (data30.length === 0 && data7.length === 0 && data1.length === 0 && data365.length === 0)) return (
     <div className="h-40 w-full flex flex-col items-center justify-center bg-red-500/5 rounded-xl border border-red-500/10">
       <AlertCircle className="w-5 h-5 text-red-400 mb-2" />
       <span className="text-xs text-red-400/80">{error || 'Produto sem buscas suficientes'}</span>
     </div>
   );
 
-  const activeData = viewMode === '30' ? data30 : data7;
+  const activeData = viewMode === '1' ? data1 : viewMode === '7' ? data7 : viewMode === '30' ? data30 : data365;
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -81,8 +85,10 @@ function TrendsGraph({ keyword }: { keyword: string }) {
         <div className="flex items-center justify-between mb-4">
           <span className="text-xs font-semibold text-white/50 uppercase">Interesse de Busca</span>
           <div className="flex bg-white/5 p-1 rounded-lg">
-             <button onClick={() => setViewMode('7')} className={cn("px-3 py-1 text-[10px] uppercase font-bold rounded-md transition-colors", viewMode === '7' ? "bg-indigo-500 text-white" : "text-white/40 hover:text-white")}>7 Dias</button>
-             <button onClick={() => setViewMode('30')} className={cn("px-3 py-1 text-[10px] uppercase font-bold rounded-md transition-colors", viewMode === '30' ? "bg-indigo-500 text-white" : "text-white/40 hover:text-white")}>30 Dias</button>
+             <button onClick={() => setViewMode('1')} className={cn("px-2 py-1 text-[10px] uppercase font-bold rounded-md transition-colors", viewMode === '1' ? "bg-indigo-500 text-white" : "text-white/40 hover:text-white")}>Ontem</button>
+             <button onClick={() => setViewMode('7')} className={cn("px-2 py-1 text-[10px] uppercase font-bold rounded-md transition-colors", viewMode === '7' ? "bg-indigo-500 text-white" : "text-white/40 hover:text-white")}>7 Dias</button>
+             <button onClick={() => setViewMode('30')} className={cn("px-2 py-1 text-[10px] uppercase font-bold rounded-md transition-colors", viewMode === '30' ? "bg-indigo-500 text-white" : "text-white/40 hover:text-white")}>30 Dias</button>
+             <button onClick={() => setViewMode('365')} className={cn("px-2 py-1 text-[10px] uppercase font-bold rounded-md transition-colors", viewMode === '365' ? "bg-indigo-500 text-white" : "text-white/40 hover:text-white")}>12 Meses</button>
           </div>
         </div>
         <div className="h-32 w-full">

@@ -10,40 +10,44 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const d1 = new Date(); d1.setDate(d1.getDate() - 1);
+    const d7 = new Date(); d7.setDate(d7.getDate() - 7);
+    const d30 = new Date(); d30.setDate(d30.getDate() - 30);
+    const d365 = new Date(); d365.setFullYear(d365.getFullYear() - 1);
 
-    // 1. Timeline 30 Dias
-    const results30 = await googleTrends.interestOverTime({ keyword, startTime: thirtyDaysAgo });
-    const timeline30Data = JSON.parse(results30).default.timelineData.map((item: any) => ({
-      date: item.formattedTime, timestamp: item.time, value: item.value[0]
-    }));
+    const [res1, res7, res30, res365, regionRes] = await Promise.all([
+      googleTrends.interestOverTime({ keyword, startTime: d1 }),
+      googleTrends.interestOverTime({ keyword, startTime: d7 }),
+      googleTrends.interestOverTime({ keyword, startTime: d30 }),
+      googleTrends.interestOverTime({ keyword, startTime: d365 }),
+      googleTrends.interestByRegion({ keyword, startTime: d30, resolution: 'COUNTRY' })
+    ]);
 
-    // 2. Timeline 7 Dias
-    const results7 = await googleTrends.interestOverTime({ keyword, startTime: sevenDaysAgo });
-    const timeline7Data = JSON.parse(results7).default.timelineData.map((item: any) => ({
-      date: item.formattedTime, timestamp: item.time, value: item.value[0]
-    }));
+    const formatData = (res: string) => {
+      try {
+        return JSON.parse(res).default.timelineData.map((item: any) => ({
+          date: item.formattedTime, timestamp: item.time, value: item.value[0]
+        }));
+      } catch (e) {
+        return [];
+      }
+    };
 
-    // 3. Regiões (Países) Top 5
-    const regionRes = await googleTrends.interestByRegion({ keyword, startTime: thirtyDaysAgo, resolution: 'COUNTRY' });
-    const geoMap = JSON.parse(regionRes).default.geoMapData || [];
-    
-    const topRegions = geoMap
-       .sort((a: any, b: any) => (b.value[0] || 0) - (a.value[0] || 0))
-       .slice(0, 5)
-       .map((item: any) => ({
-          country: item.geoName,
-          value: item.value[0] || 0
-       }));
+    const topRegions = (() => {
+      try {
+         const geoMap = JSON.parse(regionRes).default.geoMapData || [];
+         return geoMap.sort((a: any, b: any) => (b.value[0] || 0) - (a.value[0] || 0)).slice(0, 5).map((item: any) => ({
+             country: item.geoName, value: item.value[0] || 0
+         }));
+      } catch (e) { return []; }
+    })();
 
     return NextResponse.json({ 
         success: true, 
-        data30: timeline30Data, 
-        data7: timeline7Data, 
+        data1: formatData(res1),
+        data7: formatData(res7), 
+        data30: formatData(res30), 
+        data365: formatData(res365),
         topCountries: topRegions 
     });
   } catch (error: any) {
