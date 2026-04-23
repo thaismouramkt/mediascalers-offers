@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Flame, Sparkles, Loader2, AlertCircle, MapPin, DollarSign, X, ExternalLink } from 'lucide-react';
+import { Flame, Sparkles, Loader2, AlertCircle, MapPin, DollarSign, X, ExternalLink, Heart } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -143,10 +143,16 @@ export default function Dashboard() {
   const [offers, setOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'HOT' | 'NEW'>('HOT');
+  const [activeTab, setActiveTab] = useState<'HOT' | 'NEW' | 'FAVORITES'>('HOT');
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedOffer, setSelectedOffer] = useState<any | null>(null);
 
   useEffect(() => {
+    const savedFavs = localStorage.getItem('mediascalers_favs');
+    if (savedFavs) {
+      try { setFavorites(JSON.parse(savedFavs)); } catch(e){}
+    }
+
     async function fetchOffers() {
       try {
         const res = await axios.get(`/api/offers?_t=${Date.now()}`);
@@ -166,7 +172,20 @@ export default function Dashboard() {
   // "Hot Offers": O usuário informou que as ofertas HOT possuem "HOT" no nome original delas!
   const hotOffers = newOffers.filter(o => (o.name || '').toUpperCase().includes('HOT'));
   
-  const displayList = activeTab === 'HOT' ? hotOffers : newOffers;
+  // "Favorites": Lida com os favoritos pinados no storage
+  const favoriteOffers = newOffers.filter(o => favorites.includes(o.network_offer_id));
+  
+  const displayList = activeTab === 'HOT' ? hotOffers : activeTab === 'FAVORITES' ? favoriteOffers : newOffers;
+
+  const toggleFavorite = (e: React.MouseEvent, offerId: string) => {
+    e.stopPropagation();
+    setFavorites(prev => {
+      const isFav = prev.includes(offerId);
+      const newFavs = isFav ? prev.filter(id => id !== offerId) : [...prev, offerId];
+      localStorage.setItem('mediascalers_favs', JSON.stringify(newFavs));
+      return newFavs;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[#0A0B10] text-white selection:bg-indigo-500/30 font-sans pb-20">
@@ -191,6 +210,12 @@ export default function Dashboard() {
                 className={cn("flex-1 md:flex-none px-6 py-2.5 rounded-lg font-bold text-sm tracking-wide transition-all flex items-center justify-center gap-2", activeTab === 'NEW' ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-white/50 hover:bg-white/5")}
              >
                 <Sparkles className="w-4 h-4" /> NEW OFFERS
+             </button>
+             <button 
+                onClick={() => setActiveTab('FAVORITES')}
+                className={cn("flex-1 md:flex-none px-6 py-2.5 rounded-lg font-bold text-sm tracking-wide transition-all flex items-center justify-center gap-2", activeTab === 'FAVORITES' ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "text-white/50 hover:bg-white/5")}
+             >
+                <Heart className="w-4 h-4" fill={activeTab === 'FAVORITES' ? 'currentColor' : 'none'} /> FAVORITES
              </button>
           </div>
         </div>
@@ -220,15 +245,22 @@ export default function Dashboard() {
                   <div className="px-2 py-1 rounded-md bg-white/5 text-[10px] font-bold tracking-wider text-white/50">
                     ID: {offer.network_offer_id}
                   </div>
-                  {activeTab === 'HOT' ? (
-                     <div className="px-2 py-1 rounded-md bg-orange-500/10 text-[10px] font-bold text-orange-400 border border-orange-500/20 flex items-center gap-1">
-                        <Flame className="w-3 h-3" /> HOT
-                     </div>
-                  ) : (
-                     <div className="px-2 py-1 rounded-md bg-indigo-500/10 text-[10px] font-bold text-indigo-400 border border-indigo-500/20 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" /> NEW
-                     </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={(e) => toggleFavorite(e, offer.network_offer_id)} 
+                      className="text-white/20 hover:text-red-500 transition-colors z-10 p-1">
+                      <Heart className={cn("w-5 h-5 transition-transform active:scale-75", favorites.includes(offer.network_offer_id) ? "text-red-500 fill-red-500" : "")} />
+                    </button>
+                    {activeTab === 'HOT' ? (
+                       <div className="px-2 py-1 rounded-md bg-orange-500/10 text-[10px] font-bold text-orange-400 border border-orange-500/20 flex items-center gap-1">
+                          <Flame className="w-3 h-3" /> HOT
+                       </div>
+                    ) : (
+                       <div className="px-2 py-1 rounded-md bg-indigo-500/10 text-[10px] font-bold text-indigo-400 border border-indigo-500/20 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> NEW
+                       </div>
+                    )}
+                  </div>
                 </div>
 
                 <h3 className="text-base font-medium text-white/90 group-hover:text-white line-clamp-2 mb-4 flex-grow">
