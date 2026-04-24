@@ -10,10 +10,11 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const offerId = body?.offerId;
-    if (!offerId) {
+    let offerId = body?.offerId;
+    if (offerId == null) {
       return NextResponse.json({ success: false, error: 'offerId is required' }, { status: 400 });
     }
+    offerId = String(offerId);
 
     const exists = globalFavorites.includes(offerId);
     if (exists) {
