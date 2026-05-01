@@ -13,18 +13,18 @@ export async function GET(request: NextRequest) {
 
   try {
     const d1 = new Date(); d1.setDate(d1.getDate() - 1);
-    const d7 = new Date(); d7.setDate(d7.getDate() - 7);
+    const d7 = new Date(); d7.setDate(d7.getDate() - 7); d7.setHours(d7.getHours() + 1);
     const d30 = new Date(); d30.setDate(d30.getDate() - 30);
     const d365 = new Date(); d365.setFullYear(d365.getFullYear() - 1);
 
     console.log('Making Google Trends API calls...');
 
     const [res1, res7, res30, res365, regionRes] = await Promise.all([
-      googleTrends.interestOverTime({ keyword, startTime: d1 }).catch((err: any) => {
+      googleTrends.interestOverTime({ keyword, startTime: d1, granularTimeResolution: true }).catch((err: any) => {
         console.error('Error in 1 day trend:', err);
         return '[]';
       }),
-      googleTrends.interestOverTime({ keyword, startTime: d7 }).catch((err: any) => {
+      googleTrends.interestOverTime({ keyword, startTime: d7, granularTimeResolution: true }).catch((err: any) => {
         console.error('Error in 7 day trend:', err);
         return '[]';
       }),
