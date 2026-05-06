@@ -21,39 +21,33 @@ export async function GET(request: NextRequest) {
 
     console.log('Making Google Trends API calls sequentially to avoid rate limits...');
 
-    const res1 = await googleTrends.interestOverTime({ keyword, startTime: d1, granularTimeResolution: true }).catch((err: any) => {
-      console.error('Error in 1 day trend:', err.message || err);
+    const handleTrendError = (err: any) => {
+      const msg = err.message || String(err);
+      console.error('Trend API Error:', msg);
+      if (msg.includes('Unexpected token') || msg.includes('JSON')) {
+        throw new Error('RATE_LIMIT');
+      }
       return '[]';
-    });
+    };
+
+    const res1 = await googleTrends.interestOverTime({ keyword, startTime: d1, granularTimeResolution: true }).catch(handleTrendError);
     
     // Pequeno delay para evitar 429 Rate Limit
     await new Promise(r => setTimeout(r, 300));
     
-    const res7 = await googleTrends.interestOverTime({ keyword, startTime: d7, granularTimeResolution: true }).catch((err: any) => {
-      console.error('Error in 7 day trend:', err.message || err);
-      return '[]';
-    });
+    const res7 = await googleTrends.interestOverTime({ keyword, startTime: d7, granularTimeResolution: true }).catch(handleTrendError);
 
     await new Promise(r => setTimeout(r, 300));
 
-    const res30 = await googleTrends.interestOverTime({ keyword, startTime: d30 }).catch((err: any) => {
-      console.error('Error in 30 day trend:', err.message || err);
-      return '[]';
-    });
+    const res30 = await googleTrends.interestOverTime({ keyword, startTime: d30 }).catch(handleTrendError);
 
     await new Promise(r => setTimeout(r, 300));
 
-    const res365 = await googleTrends.interestOverTime({ keyword, startTime: d365 }).catch((err: any) => {
-      console.error('Error in 365 day trend:', err.message || err);
-      return '[]';
-    });
+    const res365 = await googleTrends.interestOverTime({ keyword, startTime: d365 }).catch(handleTrendError);
 
     await new Promise(r => setTimeout(r, 300));
 
-    const regionRes = await googleTrends.interestByRegion({ keyword, startTime: d30, resolution: 'COUNTRY' }).catch((err: any) => {
-      console.error('Error in region trend:', err.message || err);
-      return '[]';
-    });
+    const regionRes = await googleTrends.interestByRegion({ keyword, startTime: d30, resolution: 'COUNTRY' }).catch(handleTrendError);
 
     console.log('Google Trends API calls completed');
 
@@ -118,6 +112,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error: any) {
     console.error(`Error fetching Google Trends for [${keyword}]:`, error);
+    if (error.message === 'RATE_LIMIT') {
+      return NextResponse.json({ success: false, error: "Serviço do Google bloqueou as requisições temporariamente (Rate Limit). Tente novamente mais tarde." }, { status: 429 });
+    }
     return NextResponse.json({ success: false, error: "Erro ao buscar dados do Google Trends. Volume muito baixo ou API indisponível." }, { status: 500 });
   }
 }
