@@ -19,33 +19,51 @@ export async function GET(request: NextRequest) {
 
     console.log('Making Google Trends API calls...');
 
-    const [res1, res7, res30, res365, regionRes] = await Promise.all([
-      googleTrends.interestOverTime({ keyword, startTime: d1, granularTimeResolution: true }).catch((err: any) => {
-        console.error('Error in 1 day trend:', err);
-        return '[]';
-      }),
-      googleTrends.interestOverTime({ keyword, startTime: d7, granularTimeResolution: true }).catch((err: any) => {
-        console.error('Error in 7 day trend:', err);
-        return '[]';
-      }),
-      googleTrends.interestOverTime({ keyword, startTime: d30 }).catch((err: any) => {
-        console.error('Error in 30 day trend:', err);
-        return '[]';
-      }),
-      googleTrends.interestOverTime({ keyword, startTime: d365 }).catch((err: any) => {
-        console.error('Error in 365 day trend:', err);
-        return '[]';
-      }),
-      googleTrends.interestByRegion({ keyword, startTime: d30, resolution: 'COUNTRY' }).catch((err: any) => {
-        console.error('Error in region trend:', err);
-        return '[]';
-      })
-    ]);
+    console.log('Making Google Trends API calls sequentially to avoid rate limits...');
+
+    const res1 = await googleTrends.interestOverTime({ keyword, startTime: d1, granularTimeResolution: true }).catch((err: any) => {
+      console.error('Error in 1 day trend:', err.message || err);
+      return '[]';
+    });
+    
+    // Pequeno delay para evitar 429 Rate Limit
+    await new Promise(r => setTimeout(r, 300));
+    
+    const res7 = await googleTrends.interestOverTime({ keyword, startTime: d7, granularTimeResolution: true }).catch((err: any) => {
+      console.error('Error in 7 day trend:', err.message || err);
+      return '[]';
+    });
+
+    await new Promise(r => setTimeout(r, 300));
+
+    const res30 = await googleTrends.interestOverTime({ keyword, startTime: d30 }).catch((err: any) => {
+      console.error('Error in 30 day trend:', err.message || err);
+      return '[]';
+    });
+
+    await new Promise(r => setTimeout(r, 300));
+
+    const res365 = await googleTrends.interestOverTime({ keyword, startTime: d365 }).catch((err: any) => {
+      console.error('Error in 365 day trend:', err.message || err);
+      return '[]';
+    });
+
+    await new Promise(r => setTimeout(r, 300));
+
+    const regionRes = await googleTrends.interestByRegion({ keyword, startTime: d30, resolution: 'COUNTRY' }).catch((err: any) => {
+      console.error('Error in region trend:', err.message || err);
+      return '[]';
+    });
 
     console.log('Google Trends API calls completed');
 
     const formatData = (res: string) => {
       try {
+        if (!res || typeof res !== 'string') return [];
+        if (res.trim().startsWith('<')) {
+          console.error('Rate limited by Google Trends (HTML response received).');
+          return [];
+        }
         const parsed = JSON.parse(res);
         if (parsed.default && parsed.default.timelineData) {
           return parsed.default.timelineData.map((item: any) => ({
@@ -61,6 +79,11 @@ export async function GET(request: NextRequest) {
 
     const topRegions = (() => {
       try {
+         if (!regionRes || typeof regionRes !== 'string') return [];
+         if (regionRes.trim().startsWith('<')) {
+           console.error('Rate limited by Google Trends (HTML response received in regionRes).');
+           return [];
+         }
          const parsed = JSON.parse(regionRes);
          if (parsed.default && parsed.default.geoMapData) {
            const geoMap = parsed.default.geoMapData || [];
