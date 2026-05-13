@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import googleTrends from 'google-trends-api';
 
+interface CachedTrend {
+  data: any[];
+  topCountries: any[];
+  timestamp: number;
+}
+
+const trendCache = new Map<string, CachedTrend>();
+const CACHE_TTL = 1000 * 60 * 60 * 12; // 12 horas
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const keyword = searchParams.get('keyword');
@@ -9,6 +18,14 @@ export async function GET(request: NextRequest) {
 
   if (!keyword) {
     return NextResponse.json({ success: false, error: 'Keyword is required' }, { status: 400 });
+  }
+
+  const cacheKey = `${keyword}-${range}-${includeRegion}`;
+  const cached = trendCache.get(cacheKey);
+
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+    console.log(`Returning cached Google Trends for keyword: ${keyword}, range: ${range}, region: ${includeRegion}`);
+    return NextResponse.json({ success: true, data: cached.data, topCountries: cached.topCountries });
   }
 
   console.log(`Fetching Google Trends for keyword: ${keyword}, range: ${range}, region: ${includeRegion}`);
@@ -85,6 +102,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    if (data && data.length > 0) {
+      trendCache.set(cacheKey, { data, topCountries, timestamp: Date.now() });
+    } else if (cached) {
+      // Falback para o cache expirado se a API falhar
+      console.log(`API falhou ou retornou vazio, usando fallback do cache expirado para: ${cacheKey}`);
+      return NextResponse.json({ success: true, data: cached.data, topCountries: cached.topCountries });
+    }
+
     return NextResponse.json({
         success: true,
         data,
@@ -92,6 +117,12 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error(`Error fetching Google Trends for [${keyword}]:`, error);
+    const cachedFallback = trendCache.get(cacheKey);
+    if (cachedFallback) {
+      console.log(`Retornando fallback do cache devido a erro para: ${cacheKey}`);
+      return NextResponse.json({ success: true, data: cachedFallback.data, topCountries: cachedFallback.topCountries });
+    }
+    
     if (error.message === 'RATE_LIMIT') {
       return NextResponse.json({ success: false, error: "Serviço do Google bloqueou as requisições temporariamente (Rate Limit). Tente novamente mais tarde." }, { status: 429 });
     }
